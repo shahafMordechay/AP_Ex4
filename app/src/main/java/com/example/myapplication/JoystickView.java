@@ -16,29 +16,39 @@ public class JoystickView extends SurfaceView implements SurfaceHolder.Callback,
     private float centerY;
     private float baseRadius;
     private float hatRadius;
+    private JoystickListener joystickCallback;
 
     public JoystickView(Context context) {
         super(context);
         getHolder().addCallback(this);
         setOnTouchListener(this);
+        if (context instanceof JoystickListener) {
+            joystickCallback = (JoystickListener) context;
+        }
     }
 
     public JoystickView(Context context, AttributeSet attributes) {
         super(context, attributes);
         getHolder().addCallback(this);
         setOnTouchListener(this);
+        if (context instanceof JoystickListener) {
+            joystickCallback = (JoystickListener) context;
+        }
     }
 
     public JoystickView(Context context, AttributeSet attributes, int style) {
         super(context, attributes, style);
         getHolder().addCallback(this);
         setOnTouchListener(this);
+        if (context instanceof JoystickListener) {
+            joystickCallback = (JoystickListener) context;
+        }
     }
 
     private void setDimensions() {
         centerX = (float)getWidth() / 2;
         centerY = (float)getHeight() / 2;
-        baseRadius = (float)Math.min(getWidth(), getHeight()) / 3;
+        baseRadius = (float) (Math.min(getWidth(), getHeight()) / 2.5);
         hatRadius = (float)Math.min(getWidth(), getHeight()) / 5;
     }
 
@@ -57,7 +67,8 @@ public class JoystickView extends SurfaceView implements SurfaceHolder.Callback,
     }
 
     public void surfaceCreated(SurfaceHolder holder) {
-
+        drawJoystick(centerX, centerY);
+        drawJoystick(centerX, centerY);
     }
 
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
@@ -68,12 +79,16 @@ public class JoystickView extends SurfaceView implements SurfaceHolder.Callback,
 
     }
 
+    private float normalize(float num, float min, float max) {
+        return (((num - min) / (max - min)) * 2) - 1;
+    }
+
     public boolean onTouch(View v, MotionEvent e) {
         if (v.equals(this)) {
             if (e.getAction() != e.ACTION_UP) {
                 double xPow = (Math.pow(e.getX() - centerX, 2));
                 double yPow = (Math.pow(e.getY() - centerY, 2));
-                float displacement = (float)Math.sqrt(xPow + yPow);
+                float displacement = (float)Math.sqrt(xPow + yPow) + hatRadius;
                 if (displacement < baseRadius) {
                     drawJoystick(e.getX(), e.getY());
                 } else {
@@ -81,6 +96,14 @@ public class JoystickView extends SurfaceView implements SurfaceHolder.Callback,
                     float constrainedX = centerX + (e.getX() - centerX) * ratio;
                     float constrainedY = centerY + (e.getY() - centerY) * ratio;
                     drawJoystick(constrainedX, constrainedY);
+
+                    float normalizedX = normalize(constrainedX,
+                            centerX  - baseRadius, centerX + baseRadius);
+
+                    float normalizedY = normalize(constrainedY,
+                            centerY - baseRadius, centerY + baseRadius);
+
+                    joystickCallback.onJoystickMoved(normalizedX, normalizedY);
                 }
             }
             else {
@@ -90,4 +113,9 @@ public class JoystickView extends SurfaceView implements SurfaceHolder.Callback,
 
         return true;
     }
+}
+
+
+interface JoystickListener {
+    void onJoystickMoved(float x, float y);
 }
