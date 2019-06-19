@@ -4,13 +4,13 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.Socket;
 
 public class TcpClient {
 
     private static TcpClient client;
 
+    private Socket socket;
     private OutputStream output;
 
     private TcpClient(String ip, String port) {
@@ -44,16 +44,8 @@ public class TcpClient {
         protected String doInBackground(String... params) {
             if (output == null) {
                 try {
-                    Socket socket;
-                    InetAddress address = InetAddress.getByName(params[0]);
-                    socket = new Socket(address, Integer.parseInt(params[1]));
-                    try {
-                        output = socket.getOutputStream();
-                    } catch (Exception e) {
-                        Log.e("TCP", "S: Error", e);
-                    } finally {
-                        socket.close();
-                    }
+                    socket = new Socket(params[0], Integer.parseInt(params[1]));
+                    output = socket.getOutputStream();
                 } catch (Exception e) {
                     Log.e("TCP", "S: Error", e);
                 }
