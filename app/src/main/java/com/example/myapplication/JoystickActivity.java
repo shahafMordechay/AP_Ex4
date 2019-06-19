@@ -18,7 +18,8 @@ public class JoystickActivity extends AppCompatActivity implements JoystickListe
         Intent intent = getIntent();
         String ip = intent.getStringExtra("ip");
         String port = intent.getStringExtra("port");
-        client = TcpClient.getInstance(ip, port);
+        client = new TcpClient();
+        client.execute(ip, port);
     }
 
     public void onJoystickMoved(float x, float y) {
@@ -26,10 +27,16 @@ public class JoystickActivity extends AppCompatActivity implements JoystickListe
             return;
 
         try {
-            String s = x + ", " + y + "\r\n";
+            String s = x + ", " + y;
             client.writeToServer(s);
         } catch (Exception e) {
             Log.e("TCP", "C: Error", e);
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        client.stop();
     }
 }

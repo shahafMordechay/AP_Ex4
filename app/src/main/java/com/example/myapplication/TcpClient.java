@@ -3,54 +3,54 @@ package com.example.myapplication;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import java.io.OutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
-public class TcpClient {
-
-    private static TcpClient client;
-
-    private Socket socket;
-    private OutputStream output;
-
-    private TcpClient(String ip, String port) {
-        ConnectToServer server = new ConnectToServer();
-        server.execute(ip, port);
-    }
-
-    public static TcpClient getInstance(String ip, String port) {
-        if (client == null) {
-            synchronized (TcpClient.class) {
-                if (client == null) {
-                    client = new TcpClient(ip, port);
-                }
-            }
-        }
-
-        return client;
-    }
+public class TcpClient extends AsyncTask<String, String, Void> {
+    private BlockingQueue<String> joystickData = new LinkedBlockingQueue<>();
+    private boolean stop = false;
 
     public void writeToServer(String s) {
         try {
-            output.write(s.getBytes());
-            output.flush();
+            this.joystickData.put(s);
         } catch (Exception e) {
             Log.e("TCP", "S: Error", e);
         }
     }
 
-    private class ConnectToServer extends AsyncTask<String, Void, String> {
-        @Override
-        protected String doInBackground(String... params) {
-            if (output == null) {
-                try {
-                    socket = new Socket(params[0], Integer.parseInt(params[1]));
-                    output = socket.getOutputStream();
-                } catch (Exception e) {
-                    Log.e("TCP", "S: Error", e);
-                }
-            }
-            return null;
+    public void stop() {
+        try {
+            stop = true;
+            joystickData.put("stop");
+        } catch (Exception e) {
+            Log.e("TCP", "S: Error", e);
         }
+    }
+
+    @Override
+    protected Void doInBackground(String... params) {
+        try {
+            Socket socket = new Socket(params[0], Integer.parseInt(params[1]));
+            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            try {
+                while (!stop) {
+                    String data = joystickData.take();
+                    if (!data.equals("stop")) {
+                        output.write((data + "\r\n").getBytes());
+                        output.flush();
+                    }
+                }
+            } catch (IOException e) {
+                Log.e("TCP", "S: Error", e);
+            } finally {
+                socket.close();
+            }
+        } catch (Exception e) {
+            Log.e("TCP", "C: Error", e);
+        }
+        return null;
     }
 }
